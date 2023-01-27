@@ -19,12 +19,11 @@
 
 package com.github.fge.jsonpatch.diff;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.fge.jackson.jsonpointer.JsonPointerCustom;
-import com.github.fge.jackson.jsonpointer.JsonPointerException;
 import com.github.fge.jsonpatch.AddOperation;
 import com.github.fge.jsonpatch.CopyOperation;
 import com.github.fge.jsonpatch.JsonPatchOperation;
@@ -32,16 +31,15 @@ import com.github.fge.jsonpatch.MoveOperation;
 import com.github.fge.jsonpatch.RemoveOperation;
 import com.github.fge.jsonpatch.ReplaceOperation;
 
-
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Iterator;
+import java.util.Map;
 
 final class DiffOperation {
     private final Type type;
     /* An op's "from", if any */
     private final JsonPointerCustom from;
     /* An op's "value", if any */
-    private final JsonNode value;
+    private  JsonNode value = null;
     /* An op's "path", if any */
     private final JsonPointerCustom path;
 
@@ -138,39 +136,42 @@ final class DiffOperation {
         MOVE {
             @Override
             JsonPatchOperation toOperation(final DiffOperation op) {
-
                 return new MoveOperation(op.from, op.path);
             }
         },
         REMOVE {
             @Override
             JsonPatchOperation toOperation(final DiffOperation op) {
-
-                ObjectNode value_locator = new ObjectMapper().createObjectNode();
-
-                value_locator.set("Application Key", op.oldValue.get("Application Key"));
-                value_locator.set("Entitlement Type", op.oldValue.get("Entitlement Type"));
-                value_locator.set("Entitlement Name", op.oldValue.get("Entitlement Name"));
-
-                return new RemoveOperation(op.from, value_locator);
+                ObjectNode valueLocator = getValueLocator(op);
+                return new RemoveOperation(op.from, valueLocator);
             }
         },
         REPLACE {
             @Override
             JsonPatchOperation toOperation(final DiffOperation op) {
-
-                ObjectNode value_locator = new ObjectMapper().createObjectNode();
-
-                value_locator.set("Application Key", op.oldValue.get("Application Key"));
-                value_locator.set("Entitlement Type", op.oldValue.get("Entitlement Type"));
-                value_locator.set("Entitlement Name", op.oldValue.get("Entitlement Name"));
-
-
-                return new ReplaceOperation(op.from, op.value, value_locator);
+                ObjectNode valueLocator = getValueLocator(op);
+                return new ReplaceOperation(op.from, op.oldValue, valueLocator);
             }
         },
         ;
 
         abstract JsonPatchOperation toOperation(final DiffOperation op);
+    }
+
+    private static ObjectNode getValueLocator(final DiffOperation op) {
+//        ObjectMapper mapper = new ObjectMapper();
+//        Map<String, Object> valueLocatorMap = mapper.convertValue(value, new TypeReference<Map<String, Object>>() {
+//        });
+//        ObjectNode valueLocator = new ObjectMapper().createObjectNode();
+//        Iterator<Map.Entry<String, Object>> iterator = valueLocatorMap.entrySet().iterator();
+//        int i = 0;
+//        while (i < 3) {
+//            Map.Entry<String, Object> entry = iterator.next();
+//            String currentKey = entry.getKey();
+//            valueLocator.set(currentKey, op.oldValue.get(currentKey));
+//            i++;
+//        }
+        op.oldValue.get("ll");
+        return null;
     }
 }

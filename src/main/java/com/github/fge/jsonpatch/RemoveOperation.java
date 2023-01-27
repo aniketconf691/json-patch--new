@@ -111,10 +111,13 @@ public final class RemoveOperation extends JsonPatchOperation {
 
     @Override
     public JsonNode apply(JsonNode node, boolean flag) throws JsonPatchException {
-        if (path == null || value_locator == null) applyStrictValidation(flag);
+        if (path == null || value_locator == null) {
+            applyStrictValidation(flag);
+            return node;
+        }
         JsonNode result;
         //see if path is null and check if its has ?
-        if (path != null && path.toString().contains("?")) {
+        if (path.toString().contains("?")) {
             //get the value locator
             JsonNode valueLocatorNode = value_locator.deepCopy();
             JsonPointerCustom arrayNodePath = null;
@@ -130,6 +133,10 @@ public final class RemoveOperation extends JsonPatchOperation {
                 raw = Iterables.getLast(arrayNodePath).getToken().getRaw();
                 //get the array node
                 ArrayNode arrayNode = (ArrayNode) node.get(raw);
+                if (arrayNode == null) {
+                    applyStrictValidation(flag);
+                    return node;
+                }
                 //taking index of node that we want to remove using valueLocatorNode
                 int toRemove = getNodeToRemove(valueLocatorNode, arrayNode);
                 // if its not present then throw exception
@@ -147,15 +154,15 @@ public final class RemoveOperation extends JsonPatchOperation {
 
     @Override
     public void serialize(final JsonGenerator jgen, final SerializerProvider provider) throws IOException {
-        jgen.writeStartObject();
-        jgen.writeStringField("op", "remove");
-        jgen.writeStringField("path", path.toString());
-        jgen.writeEndObject();
+//        jgen.writeStartObject();
+//        jgen.writeStringField("op", "remove");
+//        jgen.writeStringField("path", path.toString());
+//        jgen.writeEndObject();
     }
 
     @Override
     public void serializeWithType(final JsonGenerator jgen, final SerializerProvider provider, final TypeSerializer typeSer) throws IOException {
-        serialize(jgen, provider);
+        //serialize(jgen, provider);
     }
 
     @Override
@@ -163,6 +170,6 @@ public final class RemoveOperation extends JsonPatchOperation {
         return "op: " + op + "; path: \"" + path + '"';
 
     }
-    
+
 
 }

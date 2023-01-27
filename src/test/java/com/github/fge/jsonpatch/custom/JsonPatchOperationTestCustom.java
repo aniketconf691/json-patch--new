@@ -91,6 +91,20 @@ public abstract class JsonPatchOperationTestCustom {
         }
     }
 
+    @Test(dataProvider = "getErrors")
+    public final void errorsAreCorrectlyReportedForFalse(final JsonNode patch,
+                                                         final JsonNode node, final String message)
+            throws IOException {
+        final JsonPatchOperation op = reader.readValue(patch);
+
+        try {
+            op.apply(node, false);
+//            fail("No exception thrown!!");
+        } catch (JsonPatchException e) {
+            assertEquals(e.getMessage(), message);
+        }
+    }
+
     @DataProvider
     public final Iterator<Object[]> getOps() {
         final List<Object[]> list = Lists.newArrayList();
@@ -106,7 +120,6 @@ public abstract class JsonPatchOperationTestCustom {
     }
 
 
-
     @Test(dataProvider = "getOps")
     public final void operationsYieldExpectedResults(final JsonNode patch,
                                                      final JsonNode node, final JsonNode expected)
@@ -114,6 +127,23 @@ public abstract class JsonPatchOperationTestCustom {
 
         final JsonPatchOperation op = reader.readValue(patch);
         final JsonNode actual = op.apply(node, true);
+
+        assertTrue(EQUIVALENCE.equivalent(actual, expected),
+                "patched node differs from expectations: expected " + expected
+                        + " but found " + actual);
+
+        if (EQUIVALENCE.equivalent(node, actual) && node.isContainerNode())
+            assertNotSame(node.toPrettyString(), actual.toPrettyString(),
+                    "operation didn't make a copy of the input node");
+    }
+
+    @Test(dataProvider = "getOps")
+    public final void operationsYieldExpectedResultsForFalse(final JsonNode patch,
+                                                             final JsonNode node, final JsonNode expected)
+            throws IOException, JsonPatchException {
+
+        final JsonPatchOperation op = reader.readValue(patch);
+        final JsonNode actual = op.apply(node, false);
 
         assertTrue(EQUIVALENCE.equivalent(actual, expected),
                 "patched node differs from expectations: expected " + expected

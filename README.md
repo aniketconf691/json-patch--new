@@ -160,3 +160,4 @@ final JsonNode patched = patch.apply(orig);
 [Maven]: https://search.maven.org/artifact/com.github.java-json-tools/json-patch
 # jsonPatch1
 # jsonPatch1
+# json-patch--new

@@ -143,11 +143,14 @@ public final class ReplaceOperation
     @Override
     public JsonNode apply(JsonNode node, boolean flag) throws JsonPatchException {
 
-        if (path == null || value_locator == null) applyStrictValidation(flag);
+        if (path == null || value_locator == null) {
+            applyStrictValidation(flag);
+            return node;
+        }
         JsonNode result = null;
 
         //if path is not null
-        if (path != null && path.toString().contains("?")) {
+        if (path.toString().contains("?")) {
 
             //get value locator copy
             JsonNode valueLocatorNode = value_locator.deepCopy();
@@ -155,12 +158,15 @@ public final class ReplaceOperation
             //get arrayNode in which we will find the node to update
             ArrayNode arrayNode = getArrayNode(node, flag);
 
-            if (arrayNode == null)
+            if (arrayNode == null) {
                 applyStrictValidation(flag);
+                return node;
+            }
 
             //getting the actual node to update
             JsonNode nodeToUpdate = getNodeToUpdate(flag, valueLocatorNode, arrayNode);
 
+            if (nodeToUpdate == null) return node;
             //getting the field in which update is need to be made
             String rawTokenField = getRawTokenFieldToUpdate();
 

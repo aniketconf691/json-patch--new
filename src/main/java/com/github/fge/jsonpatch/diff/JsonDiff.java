@@ -19,7 +19,7 @@
 
 package com.github.fge.jsonpatch.diff;
 
-import com.fasterxml.jackson.core.JsonPointer;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -34,6 +34,7 @@ import com.github.fge.msgsimple.bundle.MessageBundle;
 import com.github.fge.msgsimple.load.MessageBundles;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.json.JsonPointer;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -100,7 +101,273 @@ public final class JsonDiff {
         return processor.getPatch();
     }
 
-     public static JsonPatch asJsonPatchWith(final JsonNode source,
+    public static JsonPatch asJsonPatch(final JsonNode source,
+                                        final JsonNode target, final Map<JsonPointerCustom, Set<String>> map) {
+        BUNDLE.checkNotNull(source, "common.nullArgument");
+        BUNDLE.checkNotNull(target, "common.nullArgument");
+
+        final Map<JsonPointerCustom, JsonNode> unchanged = computeNonChanged(source, target);
+
+        DiffProcessor diffProcessor = new DiffProcessor(unchanged);
+
+        generateDiffs2(diffProcessor, JsonPointerCustom.empty(), source, target);
+
+
+        return null;
+    }
+
+    private static void generateDiffs2(DiffProcessor diffProcessor, JsonPointerCustom pointer, JsonNode source, JsonNode target) {
+        Map<String, Object> source1 = new ObjectMapper().convertValue(source, new TypeReference<Map<String, Object>>() {
+        });
+        Map<String, Object> target1 = new ObjectMapper().convertValue(target, new TypeReference<Map<String, Object>>() {
+        });
+
+        Map.Entry<String, Object> temp = null;
+
+        boolean foundObj = false;
+
+        for (Map.Entry<String, Object> ele1 : source1.entrySet()) {
+            foundObj = false;
+            for (Map.Entry<String, Object> ele2 : target1.entrySet()) {
+
+                if (NodeType.getNodeType(new ObjectMapper().valueToTree(ele1)) == NodeType.OBJECT) {
+
+                    if (NodeType.getNodeType(new ObjectMapper().valueToTree(ele2)) == NodeType.OBJECT) {
+                        if (ele1.getValue().equals(ele2.getValue())) {
+                            foundObj = true;
+                            break;
+                        }
+//                        } else {
+//                            temp = ele2;
+//                            break;
+//                        }
+                    } else {
+                        diffProcessor.valueReplaced(JsonPointerCustom.of("/", ele1.getKey()),
+                                new ObjectMapper().convertValue(ele1.getValue(), JsonNode.class),
+                                new ObjectMapper().convertValue(ele2.getValue(), JsonNode.class));
+                    }
+
+                } else {
+                    if (NodeType.getNodeType(new ObjectMapper().valueToTree(ele2)) == NodeType.ARRAY) {
+
+                        if (ele1.getKey() == ele2.getKey()) {
+                            if (NodeType.getNodeType(new ObjectMapper().valueToTree(ele1)) == NodeType.ARRAY) {
+                                //TODO change key
+                                ArrayNode node1 = (ArrayNode) source.get(ele1.getKey());
+                                //TODO change key
+                                ArrayNode node2 = (ArrayNode) target.get(ele2.getKey());
+                                //check add op
+                                boolean found;
+                                for (int i = 0; i < node1.size(); i++) {
+                                    //check if
+                                    found = false;
+                                    for (int j = 0; j < node2.size(); j++) {
+                                        if (isEqual(node1.get(i), node2.get(j))) {
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!found) {
+                                        System.out.println("add");
+                                        diffProcessor.valueAdded(pointer.append("Entitlements"), node1.get(i));
+                                    }
+                                }
+
+                                //check remove op
+                                found = false;
+                                for (int i = 0; i < node2.size(); i++) {
+                                    //check if
+                                    found = false;
+                                    for (int j = 0; j < node1.size(); j++) {
+                                        if (isEqual(node2.get(i), node1.get(j))) {
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!found) {
+                                        System.out.println("remove");
+                                        diffProcessor.valueRemoved(pointer.append("Entitlements"), node1.get(i));
+                                    }
+                                }
+
+                                //check replace op
+                                for (int i = 0; i < node1.size(); i++) {
+                                    //check if
+                                    for (int j = 0; j < node2.size(); j++) {
+                                        if (isEqual(node1.get(i), node2.get(j))) {
+                                            calculateReplace(node1.get(i), node2.get(j), diffProcessor, pointer.append("Entitlements"));
+                                        }
+                                    }
+                                }
+                                //here
+                                if (!found) {
+                                    diffProcessor.valueAdded(pointer.append("Entitlements"), new ObjectMapper().valueToTree(ele1));
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+            if (!foundObj) {
+                diffProcessor.valueReplaced(pointer.append("Entitlements"), new ObjectMapper().convertValue(ele1.getValue(), JsonNode.class), new ObjectMapper().convertValue(temp.getValue(), JsonNode.class));
+            }
+        }
+
+    }//end
+
+
+    private static Map<JsonPointerCustom, JsonNode> computeNonChanged(JsonNode source, JsonNode target) {
+        final Map<JsonPointerCustom, JsonNode> ret = new HashMap<>();
+        JsonPointerCustom jsonPointer = JsonPointerCustom.of("Entitlements");
+        computeNonChangedValues(ret, jsonPointer, source, target);
+        return ret;
+    }
+
+    private static void computeNonChangedValues(Map<JsonPointerCustom, JsonNode> ret, JsonPointerCustom pointer, JsonNode source, JsonNode target) {
+
+        final Iterator<String> firstFields1 = source.fieldNames();
+        String name1 = firstFields1.next();
+
+        Map<String, Object> source1 = new ObjectMapper().convertValue(source, new TypeReference<Map<String, Object>>() {
+        });
+        Map<String, Object> target1 = new ObjectMapper().convertValue(target, new TypeReference<Map<String, Object>>() {
+        });
+
+
+        boolean foundObj = false;
+
+        for (Map.Entry<String, Object> ele1 : source1.entrySet()) {
+            foundObj = false;
+            for (Map.Entry<String, Object> ele2 : target1.entrySet()) {
+
+                if (NodeType.getNodeType(new ObjectMapper().valueToTree(ele1)) == NodeType.OBJECT) {
+
+                    if (NodeType.getNodeType(new ObjectMapper().valueToTree(ele2)) == NodeType.OBJECT) {
+                        if (ele1.getValue().equals(ele2.getValue())) {
+                            foundObj = true;
+                            ret.put(JsonPointerCustom.of("/", ele1.getKey()), new ObjectMapper().convertValue(ele1, JsonNode.class));
+                        }
+                    } else {
+
+                    }
+
+                } else {
+                    if (NodeType.getNodeType(new ObjectMapper().valueToTree(ele2)) == NodeType.ARRAY) {
+
+                        if (ele1.getKey() == ele2.getKey()) {
+                            if (NodeType.getNodeType(new ObjectMapper().valueToTree(ele1)) == NodeType.ARRAY) {
+
+
+                                ArrayNode node1 = (ArrayNode) source.get(ele1.getKey());
+                                ArrayNode node2 = (ArrayNode) target.get(ele2.getKey());
+
+                                if (node1.equals(node2)) {
+                                    ret.put(JsonPointerCustom.of("/", ele1.getKey()), new ObjectMapper().convertValue(ele1, JsonNode.class));
+                                }
+//
+//                                //check replace op
+//                                for (int i = 0; i < node1.size(); i++) {
+//                                    //check if
+//                                    for (int j = 0; j < node2.size(); j++) {
+//                                        if (isEqual(node1.get(i), node2.get(j))) {
+//                                            ret.put(pointer, source.get(i));
+//                                        }
+//                                    }
+//                                }
+
+
+//                                //TODO change key
+//                                ArrayNode node1 = (ArrayNode) source.get(ele1.getKey());
+//                                //TODO change key
+//                                ArrayNode node2 = (ArrayNode) target.get(ele2.getKey());
+//                                //check add op
+//                                boolean found;
+//                                for (int i = 0; i < node1.size(); i++) {
+//                                    //check if
+//                                    found = false;
+//                                    for (int j = 0; j < node2.size(); j++) {
+//                                        if (isEqual(node1.get(i), node2.get(j))) {
+//                                            found = true;
+//                                            break;
+//                                        }
+//                                    }
+//                                    if (!found) {
+//                                        System.out.println("add");
+//
+//                                    }
+//                                }
+//
+//                                //check remove op
+//                                found = false;
+//                                for (int i = 0; i < node2.size(); i++) {
+//                                    //check if
+//                                    found = false;
+//                                    for (int j = 0; j < node1.size(); j++) {
+//                                        if (isEqual(node2.get(i), node1.get(j))) {
+//                                            found = true;
+//                                            break;
+//                                        }
+//                                    }
+//                                    if (!found) {
+//                                        System.out.println("remove");
+//                                    }
+//                                }
+//
+//                                //check replace op
+//                                for (int i = 0; i < node1.size(); i++) {
+//                                    //check if
+//                                    for (int j = 0; j < node2.size(); j++) {
+//                                        if (isEqual(node1.get(i), node2.get(j))) {
+//                                        }
+//                                    }
+//                                }
+//                                //here
+//                                if (!found) {
+//                                }
+
+                            }
+                        }
+
+                    }
+                }
+            }
+            if (!foundObj) {
+            }
+        }
+
+    }
+
+
+    private static void calculateReplace(JsonNode one, JsonNode two, DiffProcessor diffProcessor, JsonPointerCustom pointer) {
+        Map<String, Object> map1 = new ObjectMapper().convertValue(one, new TypeReference<Map<String, Object>>() {
+        });
+
+        Map<String, Object> map2 = new ObjectMapper().convertValue(two, new TypeReference<Map<String, Object>>() {
+        });
+
+        for (Map.Entry<String, Object> entry : map1.entrySet()) {
+            String currentKey = entry.getKey();
+            if (!map1.get(currentKey).equals(map2.get(currentKey))) {
+                System.out.println("replace");
+                diffProcessor.valueReplaced(pointer,
+                        new ObjectMapper().convertValue(map1.get(currentKey), JsonNode.class),
+                        new ObjectMapper().convertValue(map2.get(currentKey), JsonNode.class));
+            }
+        }
+
+    }
+
+    private static boolean isEqual(JsonNode jsonNode, JsonNode jsonNode1) {
+        if (jsonNode.get("Application Key").equals(jsonNode1.get("Application Key")) &&
+                jsonNode.get("Entitlement Type").equals(jsonNode1.get("Entitlement Type")) &&
+                jsonNode.get("Entitlement Name").equals(jsonNode1.get("Entitlement Name"))) {
+            return true;
+        }
+        return false;
+    }
+
+    public static JsonPatch asJsonPatchWith(final JsonNode source,
                                             final JsonNode target) {
         BUNDLE.checkNotNull(source, "common.nullArgument");
         BUNDLE.checkNotNull(target, "common.nullArgument");
@@ -246,6 +513,7 @@ public final class JsonDiff {
 
     private static void computeUnchanged(final Map<JsonPointerCustom, JsonNode> ret,
                                          final JsonPointerCustom pointer, final JsonNode first, final JsonNode second) {
+        //first and second equal
         if (EQUIVALENCE.equivalent(first, second)) {
             ret.put(pointer, second);
             return;

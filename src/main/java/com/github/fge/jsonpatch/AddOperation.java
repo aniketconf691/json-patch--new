@@ -68,24 +68,34 @@ import com.sun.org.slf4j.internal.LoggerFactory;
 public final class AddOperation extends PathValueOperation {
     private static final ReferenceToken LAST_ARRAY_ELEMENT = ReferenceToken.fromRaw("-");
     Logger logger = LoggerFactory.getLogger(AddOperation.class);
+
     @JsonCreator
     public AddOperation(@JsonProperty("path") final JsonPointerCustom path, @JsonProperty("value") final JsonNode value) {
         super("add", path, value);
     }
+
     @Override
     public JsonNode apply(final JsonNode node) throws JsonPatchException {
         return null;
     }
+
     @Override
     public JsonNode apply(JsonNode node, boolean flag) throws JsonPatchException {
         if (path.isEmpty()) return value;
         final JsonNode parentNode = path.parent().path(node);
         if (parentNode.isMissingNode() && flag)
             throw new JsonPatchException(BUNDLE.getMessage("jsonPatch.noSuchParent"));
-        if (parentNode.isMissingNode() && !flag) logger.error("jsonPatch.noSuchParent");
-        if (!parentNode.isContainerNode() && flag)
+        if (parentNode.isMissingNode() && !flag) {
+            logger.error("jsonPatch.noSuchParent");
+            return node;
+        }
+        if (!parentNode.isContainerNode() && flag) {
             throw new JsonPatchException(BUNDLE.getMessage("jsonPatch.parentNotContainer"));
-        if (!parentNode.isContainerNode() && !flag) logger.error("jsonPatch.parentNotContainer");
+        }
+        if (!parentNode.isContainerNode() && !flag) {
+            logger.error("jsonPatch.parentNotContainer");
+            return node;
+        }
         return parentNode.isArray() ? addToArray(path, node) : addToObject(path, node);
     }
 

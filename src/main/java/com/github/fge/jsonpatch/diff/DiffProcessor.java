@@ -19,18 +19,18 @@
 
 package com.github.fge.jsonpatch.diff;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.fge.jackson.JsonNumEquals;
 import com.github.fge.jackson.jsonpointer.JsonPointerCustom;
-import com.github.fge.jackson.jsonpointer.JsonPointerException;
 import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchOperation;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 // TODO: cleanup
 final class DiffProcessor {
@@ -55,20 +55,20 @@ final class DiffProcessor {
     }
 
     void valueAdded(final JsonPointerCustom pointer, final JsonNode value) {
-        final int removalIndex = findPreviouslyRemoved(value);
-        if (removalIndex != -1) {
-            final DiffOperation removed = diffs.get(removalIndex);
-            diffs.remove(removalIndex);
-            diffs.add(DiffOperation.move(removed.getFrom(),
-                    value, pointer, value));
-            return;
-        }
-        final JsonPointerCustom ptr = findUnchangedValue(value);
-        final DiffOperation op = ptr != null
-                ? DiffOperation.copy(ptr, pointer, value)
-                : DiffOperation.add(pointer, value);
+//        final int removalIndex = findPreviouslyRemoved(value);
+//        if (removalIndex != -1) {
+//            final DiffOperation removed = diffs.get(removalIndex);
+//            diffs.remove(removalIndex);
+//            diffs.add(DiffOperation.move(removed.getFrom(),
+//                    value, pointer, value));
+//            return;
+//        }
+//        final JsonPointerCustom ptr = findUnchangedValue(value);
+//        final DiffOperation op = ptr != null
+//                ? DiffOperation.copy(ptr, pointer, value)
+//                : DiffOperation.add(pointer, value);
 
-        diffs.add(op);
+        diffs.add(DiffOperation.add(pointer, value));
     }
 
     JsonPatch getPatch() {

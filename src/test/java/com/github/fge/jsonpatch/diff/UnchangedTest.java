@@ -24,55 +24,79 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jackson.JacksonUtils;
 import com.github.fge.jackson.JsonLoader;
+import com.github.fge.jackson.jsonpointer.JsonPointer;
 import com.github.fge.jackson.jsonpointer.JsonPointerCustom;
+import com.github.fge.jsonpatch.JsonPatch;
 import com.google.common.collect.Lists;
+import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.testng.Assert.assertEquals;
 
-public final class UnchangedTest
-{
+public final class UnchangedTest {
     private static final ObjectMapper MAPPER = JacksonUtils.newMapper();
     private static final TypeReference<Map<JsonPointerCustom, JsonNode>> TYPE_REF
-        = new TypeReference<Map<JsonPointerCustom, JsonNode>>()
-    {
+            = new TypeReference<Map<JsonPointerCustom, JsonNode>>() {
     };
 
     private final JsonNode testData;
 
     public UnchangedTest()
-        throws IOException
-    {
+            throws IOException {
         final String resource = "/jsonpatch/diff/unchanged.json";
         testData = JsonLoader.fromResource(resource);
     }
 
     @DataProvider
     public Iterator<Object[]> getTestData()
-        throws IOException
-    {
+            throws IOException {
         final List<Object[]> list = Lists.newArrayList();
 
-        for (final JsonNode node: testData)
-            list.add(new Object[] { node.get("first"), node.get("second"),
-                MAPPER.readValue(node.get("unchanged").traverse(), TYPE_REF)});
+        for (final JsonNode node : testData)
+            list.add(new Object[]{node.get("first"), node.get("second"),
+                    MAPPER.readValue(node.get("unchanged").traverse(), TYPE_REF)});
 
         return list.iterator();
     }
 
     @Test(dataProvider = "getTestData")
     public void computeUnchangedValuesWorks(final JsonNode first,
-        final JsonNode second, final Map<JsonPointerCustom, JsonNode> expected)
-    {
+                                            final JsonNode second, final Map<JsonPointerCustom, JsonNode> expected) {
         final Map<JsonPointerCustom, JsonNode> actual
-            = JsonDiff.getUnchangedValues(first, second);
+                = JsonDiff.getUnchangedValues(first, second);
 
         assertEquals(actual, expected);
     }
+
+    @Test
+    public void testCase1() throws IOException {
+
+        final String resource_one = "/jsonpatch/diff/old_diff_custom.json";
+        final JsonNode first = JsonLoader.fromResource(resource_one);
+
+        final String resource_two = "/jsonpatch/diff/new_diff_custom.json";
+        final JsonNode second = JsonLoader.fromResource(resource_two);
+
+        JsonPointerCustom pointer = JsonPointerCustom.of("Entitlements");
+        Map<JsonPointerCustom, Set<String>> map = new HashMap<>();
+        Set<String> set = new HashSet<>();
+        set.add("Application Key");
+        set.add("Entitlement Type");
+        set.add("Entitlement Name");
+        map.put(pointer, set);
+
+        JsonDiff.asJsonPatch(first, second, map);
+
+
+    }
+
 }
